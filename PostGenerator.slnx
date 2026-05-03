@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="PostGenerator.Api/PostGenerator.Api.csproj" />
+  <Project Path="PostGenerator.Service/PostGenerator.Service.csproj" />
+  <Project Path="PostGenerator.Shared/PostGenerator.Shared.csproj" />
+</Solution>
