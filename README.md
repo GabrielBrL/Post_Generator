@@ -52,7 +52,7 @@ Result returned to caller
 
 | | |
 |---|---|
-| Runtime | .NET 8 |
+| Runtime | .NET 10 |
 | Framework | ASP.NET Core Web API |
 | AI | Anthropic Claude (`claude-sonnet-4-20250514`) |
 
@@ -87,7 +87,7 @@ AgentAPI/
 
 ### Prerequisites
 
-- [.NET 8 SDK](https://dotnet.microsoft.com/download)
+- [.NET 10 SDK](https://dotnet.microsoft.com/download)
 - An [Anthropic API key](https://console.anthropic.com)
 
 ### Installation
