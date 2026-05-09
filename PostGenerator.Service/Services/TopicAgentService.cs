@@ -2,27 +2,27 @@
 using PostGenerator.Infra.Http;
 using PostGenerator.Service.Utils;
 using PostGenerator.Shared.IServices;
-using PostGenerator.Shared.Model;
 using PostGenerator.Shared.Request;
 using PostGenerator.Shared.Response;
-using System.Net.Http.Json;
-using System.Reflection.Metadata;
-using System.Runtime.Intrinsics.X86;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
-using System.Text.RegularExpressions;
+using static System.Net.WebRequestMethods;
 
 namespace PostGenerator.Service.Services;
 
-public class IdeaAgentService(ManagedAgentsHttpClient http, IConfiguration config) : IIdeaAgentService
+public class TopicAgentService(ManagedAgentsHttpClient http, IConfiguration config) : ITopicAgentService
 {
-    private readonly string _agentId = config.GetSection("Anthropic").GetSection("DEV").GetValue<string>("idea_agent")
+    private readonly string _agentId = config.GetSection("Anthropic").GetSection("DEV").GetValue<string>("topic_agent")
     ?? throw new InvalidOperationException("Set topic_agent on appsettings.");
+
     private readonly string _envId = config.GetSection("Anthropic").GetSection("DEV").GetValue<string>("env_id")
         ?? throw new InvalidOperationException("Set env_id on appsettings.");
-    public async Task<PostIdeaResponse?> GenerateIdeaAsync(PostRequest postRequest, CancellationToken ct)
-    {
 
+    public async IAsyncEnumerable<TopicResult> GenerateAsync(
+        TopicRequest request,
+        [EnumeratorCancellation] CancellationToken ct = default)
+    {
         var session = await http.PostAsync("/v1/sessions", new
         {
             agent = _agentId,
@@ -32,6 +32,7 @@ public class IdeaAgentService(ManagedAgentsHttpClient http, IConfiguration confi
 
         var sessionId = session.GetProperty("id").GetString()!;
 
+        // Send user message (non-blocking — stream must open first)
         _ = Task.Run(async () =>
         {
             await Task.Delay(200, ct);
@@ -42,12 +43,13 @@ public class IdeaAgentService(ManagedAgentsHttpClient http, IConfiguration confi
                     new
                     {
                         type    = "user.message",
-                        content = new[] { new { type = "text", text = BuildPrompt(postRequest) } }
+                        content = new[] { new { type = "text", text = BuildPrompt(request) } }
                     }
                 }
             }, ct);
         }, ct);
 
+        // Collect agent text until idle, then parse and yield
         var buffer = new StringBuilder();
 
         await foreach (var evt in http.StreamAsync($"/v1/sessions/{sessionId}/events/stream", ct))
@@ -62,25 +64,28 @@ public class IdeaAgentService(ManagedAgentsHttpClient http, IConfiguration confi
             if (type == "session.status_idle") break;
         }
 
+        foreach (TopicResult topic in JsonTreatment.Parse<List<TopicResult>>(buffer.ToString()) ?? new())
+            yield return topic;
+
         await http.DeleteAsync($"/v1/sessions/{sessionId}", ct);
-
-        return JsonTreatment.Parse<PostIdeaResponse>(buffer.ToString());
-
     }
 
-    private static string BuildPrompt(PostRequest r) =>
+    private string BuildPrompt(TopicRequest r) =>
         $"""
-            Generate a LinkedIn post idea for the following:
-
-            Title: {r.topic.Title}
-            Hook: {r.topic.Hook}
-            Platform: {r.topic.Platform}
-            Stacks: {r.topic.Stacks}
-            Format: {r.topic.Format}
-            Level: {r.topic.Level}
-            Language: {r.topic.Language}
-
-            JSON fields: title, content_angle, target_audience, content_goal, outline, cta, key_points, suggested_visuals, estimated_length, tone, language.
-            Respond ONLY with the JSON array.
+        Generate exactly {r.Quantity} creative post topic ideas for: {string.Join(", ", r.Stacks)}.
+ 
+        {(r.Platform == "mixed"
+            ? "Vary platforms: LinkedIn, Technical Blog, Twitter/X, YouTube, Newsletter."
+            : $"Platform: {r.Platform}.")}
+        {(r.Level == "mixed"
+            ? "Vary levels: beginner, intermediate, advanced."
+            : $"Level: {r.Level}.")}
+ 
+        Language: {r.Language}.
+ 
+        JSON fields per item: title (max 80 chars), hook (2-3 sentences), platform, stacks, format, level, language.
+        Respond ONLY with the JSON array.
         """;
+
+    
 }

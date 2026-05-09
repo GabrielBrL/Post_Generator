@@ -1,5 +1,6 @@
 
 using PostGenerator.Api.Middleware;
+using PostGenerator.Infra;
 using PostGenerator.Service;
 
 namespace PostGenerator.Api
@@ -16,6 +17,7 @@ namespace PostGenerator.Api
             // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
             builder.Services.AddOpenApi();
 
+            builder.Services.AddInfraestructure(builder.Configuration);
             builder.Services.AddServices(builder.Configuration);
 
             var app = builder.Build();

@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using PostGenerator.Service.IServices;
 using PostGenerator.Service.Services;
+using PostGenerator.Shared.IServices;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -16,6 +16,7 @@ public static class DependencyInjection
         //Add services
         services.AddScoped<IIdeaAgentService, IdeaAgentService>();
         services.AddScoped<IWriterAgentService, WriterAgentService>();
+        services.AddTransient<ITopicAgentService, TopicAgentService>();
 
         return services;
     }
