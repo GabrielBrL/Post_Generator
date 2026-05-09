@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Configuration;
+using PostGenerator.Infra.Http;
 using PostGenerator.Shared.IServices;
 using PostGenerator.Shared.Model;
 using PostGenerator.Shared.Request;
@@ -6,59 +7,56 @@ using PostGenerator.Shared.Response;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using static System.Net.WebRequestMethods;
 
 namespace PostGenerator.Service.Services;
 
-public class WriterAgentService(IHttpClientFactory factory, IConfiguration config) : IWriterAgentService
+public class WriterAgentService(ManagedAgentsHttpClient http, IConfiguration config) : IWriterAgentService
 {
-    public async Task<string> WritePostAsync(PostRequest idea, string? tone, string? audience)
+    private readonly string _agentId = config.GetSection("Anthropic").GetSection("DEV").GetValue<string>("writer_agent")
+    ?? throw new InvalidOperationException("Set topic_agent on appsettings.");
+    private readonly string _envId = config.GetSection("Anthropic").GetSection("DEV").GetValue<string>("env_id")
+        ?? throw new InvalidOperationException("Set env_id on appsettings.");
+    public async Task<string> WritePostAsync(PostIdeaResponse idea, CancellationToken ct)
     {
-        //var client = factory.CreateClient();
-        //var apiKey = config["Anthropic:ApiKey"];
+        var session = await http.PostAsync("/v1/sessions", new
+        {
+            agent = _agentId,
+            environment_id = _envId,
+            title = "Post topic generation"
+        }, ct);
 
-        //client.DefaultRequestHeaders.Add("x-api-key", apiKey);
-        //client.DefaultRequestHeaders.Add("anthropic-version", "2023-06-01");
+        var sessionId = session.GetProperty("id").GetString()!;
 
-        //var prompt = $"""
-        //    You are an expert LinkedIn copywriter. Write a high-engagement LinkedIn post.
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(200, ct);
+            await http.PostAsync($"/v1/sessions/{sessionId}/events", new
+            {
+                events = new[]
+                {
+                    new
+                    {
+                        type    = "user.message",
+                        content = new[] { new { type = "text", text = JsonSerializer.Serialize(idea) } }
+                    }
+                }
+            }, ct);
+        }, ct);
 
-        //    Use this idea as your blueprint:
-        //    - Angle: {idea.Angle}
-        //    - Key Points: {idea.KeyPoints}
-        //    - Hook (opening line): {idea.Hook}
-        //    - Call to Action: {idea.CallToAction}
+        var buffer = new StringBuilder();
 
-        //    Tone: {tone ?? "professional"}
-        //    Target Audience: {audience ?? "general professionals"}
+        await foreach (var evt in http.StreamAsync($"/v1/sessions/{sessionId}/events/stream", ct))
+        {
+            var type = evt.TryGetProperty("type", out var t) ? t.GetString() : null;
 
-        //    Rules:
-        //    - Start with the hook (no intro like "Here's a post:")
-        //    - Use short paragraphs (1-2 lines max)
-        //    - Add relevant emojis sparingly
-        //    - Use line breaks for readability
-        //    - End with the call to action
-        //    - Max 1300 characters (LinkedIn limit)
-        //    - Do NOT use hashtags (keep it clean)
+            if (type == "agent.message" && evt.TryGetProperty("content", out var content))
+                foreach (var block in content.EnumerateArray())
+                    if (block.TryGetProperty("text", out var text))
+                        buffer.Append(text.GetString());
 
-        //    Return ONLY the post text, nothing else.
-        //""";
-
-        //var body = new
-        //{
-        //    model = "claude-sonnet-4-6",
-        //    max_tokens = 100,
-        //    messages = new[]
-        //    {
-        //        new { role = "user", content = prompt }
-        //    }
-        //};
-
-        //var response = await client.PostAsync(
-        //    "https://api.anthropic.com/v1/messages",
-        //    new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json"));
-
-        //var result = await response.Content.ReadFromJsonAsync<AnthropicResponse>();
-        //return result!.Content[0].Text.Trim();
-        return "";
+            if (type == "session.status_idle") break;
+        }
+        return buffer.ToString().Trim();
     }
 }

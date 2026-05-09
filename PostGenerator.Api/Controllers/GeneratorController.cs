@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using PostGenerator.Shared.IServices;
 using PostGenerator.Shared.Request;
+using PostGenerator.Shared.Response;
 
 namespace PostGenerator.Api.Controllers;
 
@@ -20,21 +21,21 @@ public class GeneratorController(ITopicAgentService topicAgent, IIdeaAgentServic
     public async Task<IActionResult> GenerateAndPost([FromBody] PostRequest request)
     {
         // Step 1: Idea Agent brainstorms the concept
-        var idea = await ideaAgent.GenerateIdeaAsync(
+        PostIdeaResponse? idea = await ideaAgent.GenerateIdeaAsync(
             request, HttpContext.RequestAborted);
 
-        // Step 2: Writer Agent crafts the post
-        //var postContent = await writerAgent.WritePostAsync(
-        //    idea, request.Tone, request.Audience);
+        // Step 2: Writer Agent crafts the post        
+        if (idea != null)
+        {
+            var postContent = await writerAgent.WritePostAsync(
+                idea, HttpContext.RequestAborted);
+            return Ok(postContent);
+        }
 
         // Step 3: Post to LinkedIn
         //var posted = await linkedIn.PostAsync(request.AccessToken, postContent);
 
-        //if (!posted)
-        //    return BadRequest("Post was generated but LinkedIn rejected it.");
-
-        //return Ok(new GeneratedPost(postContent, idea.Angle));
-        return Ok(idea);
+        return BadRequest("Post was generated but LinkedIn rejected it.");
     }
 
     // Preview only — no LinkedIn posting

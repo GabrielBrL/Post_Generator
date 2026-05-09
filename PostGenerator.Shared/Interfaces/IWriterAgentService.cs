@@ -9,5 +9,5 @@ namespace PostGenerator.Shared.IServices;
 
 public interface IWriterAgentService
 {
-    Task<string> WritePostAsync(PostRequest idea, string? tone, string? audience);
+    Task<string> WritePostAsync(PostIdeaResponse idea, CancellationToken ct);
 }
