@@ -17,6 +17,7 @@ public static class DependencyInjection
         services.AddScoped<IIdeaAgentService, IdeaAgentService>();
         services.AddScoped<IWriterAgentService, WriterAgentService>();
         services.AddTransient<ITopicAgentService, TopicAgentService>();
+        services.AddTransient<OllamaService>();
 
         return services;
     }

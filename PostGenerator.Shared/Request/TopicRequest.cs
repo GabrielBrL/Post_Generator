@@ -6,7 +6,7 @@ namespace PostGenerator.Shared.Request;
 
 public record TopicRequest(
 string[] Stacks,
-int Quantity = 6,
+int Quantity = 5,
 string Platform = "mixed",
 string Level = "mixed",
 string Language = "English"
