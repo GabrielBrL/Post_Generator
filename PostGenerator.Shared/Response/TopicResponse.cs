@@ -5,6 +5,10 @@ using System.Text.Json.Serialization;
 
 namespace PostGenerator.Shared.Response;
 
+public record TopicResponse(
+    [property: JsonPropertyName("topic")] List<TopicResult> Topics
+    );
+
 public record TopicResult(
 [property: JsonPropertyName("title")] string Title,
 [property: JsonPropertyName("hook")] string Hook,

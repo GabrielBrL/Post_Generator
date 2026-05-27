@@ -1,6 +1,6 @@
 <Solution>
   <Project Path="PostGenerator.Api/PostGenerator.Api.csproj" />
-  <Project Path="PostGenerator.Infra/PostGenerator.Infra.csproj" Id="6eb4afd2-e6d9-4287-bbbb-d3c5d9f1194e" />
+  <Project Path="PostGenerator.Infra/PostGenerator.Infra.csproj" />
   <Project Path="PostGenerator.Service/PostGenerator.Service.csproj" />
   <Project Path="PostGenerator.Shared/PostGenerator.Shared.csproj" />
 </Solution>

@@ -14,12 +14,13 @@ public class OllamaService(IHttpClientFactory clientFactory)
     private const string ProxyUrl = "http://localhost:8000"; // <-- YOUR PYTHON PROXY URL
 
     // This method handles the entire streaming communication
-    public async Task<List<TopicResult>> StreamChatAsync(TopicRequest topic)
+    public async Task<TopicResponse?> StreamChatAsync(TopicRequest topic)
     {
         _httpClient.BaseAddress = new Uri(ProxyUrl);
 
         var request = await _httpClient.PostAsJsonAsync("/generate-topic", topic);
-        var result = await request.Content.ReadFromJsonAsync<List<TopicResult>>() ?? new();
+        string content = await request.Content.ReadAsStringAsync();
+        var result = await request.Content.ReadFromJsonAsync<TopicResponse>();
         return result;
     }
 
