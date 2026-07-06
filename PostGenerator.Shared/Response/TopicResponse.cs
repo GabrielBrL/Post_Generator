@@ -6,7 +6,7 @@ using System.Text.Json.Serialization;
 namespace PostGenerator.Shared.Response;
 
 public record TopicResponse(
-    [property: JsonPropertyName("topic")] List<TopicResult> Topics
+    [property: JsonPropertyName("topics")] List<TopicResult> Topics
     );
 
 public record TopicResult(

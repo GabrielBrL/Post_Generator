@@ -20,6 +20,19 @@ namespace PostGenerator.Api
             builder.Services.AddInfraestructure(builder.Configuration);
             builder.Services.AddServices(builder.Configuration);
 
+
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("AllowAngular",
+                    policy =>
+                    {
+                        policy
+                            .WithOrigins("http://localhost:63889")
+                            .AllowAnyHeader()
+                            .AllowAnyMethod();
+                    });
+            });
+
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
@@ -37,6 +50,10 @@ namespace PostGenerator.Api
             app.UseAuthorization();
 
             app.UseMiddleware<ExceptionMiddleware>();
+
+            app.UseCors("AllowAngular");
+
+            app.MapGet("/health", () => "Hello World! This is the Post Generator API.");
 
             app.MapControllers();
 
